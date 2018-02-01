@@ -114,6 +114,8 @@ def normalize(x):
     RGB_max = 255
     return a + ( ( (x - RGB_min)*(b - a) )/( RGB_max - RGB_min ) )
 
+    (x-np.min(x))/(np.max(x)-np.min(x))
+
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
@@ -291,8 +293,9 @@ def conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ks
     """
     # TODO: Implement Function
     conv_num_inputs = x_tensor.get_shape().as_list()[-1]
-    W = tf.Variable(tf.random_normal(list(conv_ksize+(conv_num_inputs,conv_num_outputs))))
-    b = tf.Variable(tf.random_normal([conv_num_outputs]))
+    W = tf.Variable(tf.random_normal(list(conv_ksize+(conv_num_inputs,conv_num_outputs)),stddev=0.05))
+    # b = tf.Variable(tf.random_normal([conv_num_outputs]))
+    b = tf.Variable(tf.zeros([conv_num_outputs]))
     x = tf.nn.conv2d(x_tensor, W, strides=list((1,)+conv_strides+(1,)), padding='SAME')
     x = tf.nn.bias_add(x, b)
     x = tf.nn.relu(x)
@@ -350,8 +353,9 @@ def fully_conn(x_tensor, num_outputs):
     # TODO: Implement Function
     #return tf.contrib.layers.fully_connected(x_tensor, num_outputs)
     num_inputs = x_tensor.get_shape().as_list()[-1]
-    weight = tf.Variable(tf.random_normal([num_inputs, num_outputs]))
-    b = tf.Variable(tf.random_normal([num_outputs]))
+    weight = tf.Variable(tf.random_normal([num_inputs, num_outputs],stddev=0.05))
+    #b = tf.Variable(tf.random_normal([num_outputs]))
+    b = tf.Variable(tf.zeros([num_outputs]))
     x = tf.nn.relu(tf.nn.bias_add(tf.matmul(x_tensor, weight), b))
     #x = tf.nn.dropout(x, dropout)
     return x
@@ -382,8 +386,9 @@ def output(x_tensor, num_outputs):
     # TODO: Implement Function
     #return tf.contrib.layers.fully_connected(x_tensor, num_outputs, activation_fn = None)
     num_inputs = x_tensor.get_shape().as_list()[-1]
-    weight = tf.Variable(tf.random_normal([num_inputs, num_outputs]))
-    b = tf.Variable(tf.random_normal([num_outputs]))
+    weight = tf.Variable(tf.random_normal([num_inputs, num_outputs],stddev=0.05))
+    #b = tf.Variable(tf.random_normal([num_outputs]))
+    b = tf.Variable(tf.zeros([num_outputs]))
     return tf.nn.bias_add(tf.matmul(x_tensor, weight), b)
 
 
@@ -418,8 +423,8 @@ def conv_net(x, keep_prob):
     #    Play around with different number of outputs, kernel size and stride
     # Function Definition from Above:
     #    conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ksize, pool_strides)
-    conv1 = conv2d_maxpool(x, 64, (5,5), (1,1), (3,3), (2,2))
-    conv2 = conv2d_maxpool(conv1, 64, (5,5), (1,1), (3,3), (2,2))
+    conv1 = conv2d_maxpool(x, 64, (3,3), (1,1), (3,3), (2,2))
+    conv2 = conv2d_maxpool(conv1, 128, (3,3), (1,1), (3,3), (2,2))
 
     # TODO: Apply a Flatten Layer
     # Function Definition from Above:
@@ -430,9 +435,9 @@ def conv_net(x, keep_prob):
     #    Play around with different number of outputs
     # Function Definition from Above:
     #   fully_conn(x_tensor, num_outputs)
-    fc1 = fully_conn(layer_flatten, 384)
+    fc1 = fully_conn(layer_flatten, 256)
     fc1 = tf.nn.dropout(fc1, keep_prob)
-    fc2 = fully_conn(fc1, 192)
+    fc2 = fully_conn(fc1, 128)
     fc2 = tf.nn.dropout(fc2, keep_prob)
     
     # TODO: Apply an Output Layer
@@ -533,7 +538,8 @@ def print_stats(session, feature_batch, label_batch, cost, accuracy):
     : accuracy: TensorFlow accuracy function
     """
     # TODO: Implement Function
-    cost_batch, accuracy_batch = sess.run([cost, accuracy], feed_dict={keep_prob: 1.0, x: feature_batch, y:label_batch})
+    cost_batch, _ = sess.run([cost, accuracy], feed_dict={keep_prob: 1.0, x: feature_batch, y:label_batch})
+    _, accuracy_batch = sess.run([cost, accuracy], feed_dict={keep_prob: 1.0, x: valid_features, y:valid_labels})
     print('loss:{0}; accuracy: {1}'.format(cost_batch, accuracy_batch))
 
 
@@ -563,7 +569,7 @@ keep_probability = 0.5
 # 我们先用单个部分，而不是用所有的 CIFAR-10 批次训练神经网络。这样可以节省时间，并对模型进行迭代，以提高准确率。最终验证准确率达到 50% 或以上之后，在下一部分对所有数据运行模型。
 # 
 
-# In[17]:
+# In[16]:
 
 
 """
@@ -587,7 +593,7 @@ with tf.Session() as sess:
 # 
 # 现在，单个 CIFAR-10 部分的准确率已经不错了，试试所有五个部分吧。
 
-# In[18]:
+# In[17]:
 
 
 """
@@ -623,7 +629,7 @@ with tf.Session() as sess:
 # 
 # 利用测试数据集测试你的模型。这将是最终的准确率。你的准确率应该高于 50%。如果没达到，请继续调整模型结构和参数。
 
-# In[19]:
+# In[18]:
 
 
 """
