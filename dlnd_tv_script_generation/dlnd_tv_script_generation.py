@@ -111,16 +111,16 @@ def token_lookup():
     """
     # TODO: Implement Function
     dic={}
-    dic["."]="||Period||"
-    dic[","]="||Comma||"
-    dic["\""]="||Quotation_Mark||"
-    dic[";"]="||Semicolon||"
-    dic["!"]="||Exclamation_Mark||"
-    dic["?"]="||Question_Mark||"
-    dic["("]="||Left_Parentheses||"
-    dic[")"]="||Right_Parentheses||"
-    dic["--"]="||Dash||"
-    dic["\n"]="||Return||"
+    dic['.']="||Period||"
+    dic[',']="||Comma||"
+    dic['"']="||Quotation_Mark||"
+    dic[';']="||Semicolon||"
+    dic['!']="||Exclamation_Mark||"
+    dic['?']="||Question_Mark||"
+    dic['(']="||Left_Parentheses||"
+    dic[')']="||Right_Parentheses||"
+    dic['--']="||Dash||"
+    dic['\n']="||Return||"
     
     return dic
 
@@ -316,7 +316,7 @@ tests.test_build_rnn(build_rnn)
 # 
 # Return the logits and final state in the following tuple (Logits, FinalState) 
 
-# In[35]:
+# In[12]:
 
 def build_nn(cell, rnn_size, input_data, vocab_size, embed_dim):
     """
@@ -331,7 +331,7 @@ def build_nn(cell, rnn_size, input_data, vocab_size, embed_dim):
     # TODO: Implement Function
     embed=get_embed(input_data, vocab_size, embed_dim)
     lstm_output,final_state=build_rnn(cell, embed)
-    logits=tf.contrib.layers.fully_connected(lstm_output, vocab_size, activation_fn=tf.sigmoid)
+    logits=tf.contrib.layers.fully_connected(lstm_output, vocab_size, activation_fn=None)
     return logits, final_state
     
 
@@ -369,7 +369,7 @@ tests.test_build_nn(build_nn)
 # ]
 # ```
 
-# In[36]:
+# In[13]:
 
 def get_batches(int_text, batch_size, seq_length):
     """
@@ -420,12 +420,12 @@ tests.test_get_batches(get_batches)
 # - Set `learning_rate` to the learning rate.
 # - Set `show_every_n_batches` to the number of batches the neural network should print progress.
 
-# In[37]:
+# In[14]:
 
 # Number of Epochs
 num_epochs = 20
 # Batch Size
-batch_size = 100
+batch_size = 50
 # RNN Size
 rnn_size = 128
 # Embedding Dimension Size
@@ -433,7 +433,7 @@ embed_dim = 300
 # Sequence Length
 seq_length = 10
 # Learning Rate
-learning_rate = 0.001
+learning_rate = 0.0005
 # Show stats for every n number of batches
 show_every_n_batches = 5
 
@@ -446,7 +446,7 @@ save_dir = './save'
 # ### Build the Graph
 # Build the graph using the neural network you implemented.
 
-# In[38]:
+# In[15]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -482,7 +482,7 @@ with train_graph.as_default():
 # ## Train
 # Train the neural network on the preprocessed data.  If you have a hard time getting a good loss, check the [forms](https://discussions.udacity.com/) to see if anyone is having the same problem.
 
-# In[39]:
+# In[16]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -520,7 +520,7 @@ with tf.Session(graph=train_graph) as sess:
 # ## Save Parameters
 # Save `seq_length` and `save_dir` for generating a new TV script.
 
-# In[ ]:
+# In[17]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -531,7 +531,7 @@ helper.save_params((seq_length, save_dir))
 
 # # Checkpoint
 
-# In[ ]:
+# In[18]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -555,7 +555,7 @@ seq_length, load_dir = helper.load_params()
 # 
 # Return the tensors in the following tuple `(InputTensor, InitialStateTensor, FinalStateTensor, ProbsTensor)` 
 
-# In[ ]:
+# In[19]:
 
 def get_tensors(loaded_graph):
     """
@@ -564,7 +564,11 @@ def get_tensors(loaded_graph):
     :return: Tuple (InputTensor, InitialStateTensor, FinalStateTensor, ProbsTensor)
     """
     # TODO: Implement Function
-    return None, None, None, None
+    Input=loaded_graph.get_tensor_by_name("input:0")
+    InitialState=loaded_graph.get_tensor_by_name("initial_state:0")
+    FinalState=loaded_graph.get_tensor_by_name("final_state:0")
+    Probs=loaded_graph.get_tensor_by_name("probs:0")
+    return Input, InitialState, FinalState, Probs
 
 
 """
@@ -576,7 +580,7 @@ tests.test_get_tensors(get_tensors)
 # ### Choose Word
 # Implement the `pick_word()` function to select the next word using `probabilities`.
 
-# In[ ]:
+# In[20]:
 
 def pick_word(probabilities, int_to_vocab):
     """
@@ -586,7 +590,15 @@ def pick_word(probabilities, int_to_vocab):
     :return: String of the predicted word
     """
     # TODO: Implement Function
-    return None
+    vocab_size=len(int_to_vocab)
+    top_n=5
+    p=np.squeeze(probabilities)
+    p[np.argsort(p)[:-top_n]] = 0
+    p = p / np.sum(p)
+    id_select=np.random.choice(vocab_size, 1, p=p)[0]
+    pred_word=int_to_vocab[id_select]
+#     print(pred_word)
+    return pred_word
 
 
 """
@@ -598,7 +610,7 @@ tests.test_pick_word(pick_word)
 # ## Generate TV Script
 # This will generate the TV script for you.  Set `gen_length` to the length of TV script you want to generate.
 
-# In[ ]:
+# In[21]:
 
 gen_length = 200
 # homer_simpson, moe_szyslak, or Barney_Gumble
