@@ -72,8 +72,8 @@ def create_lookup_tables(text):
     :return: A tuple of dicts (vocab_to_int, int_to_vocab)
     """
     # TODO: Implement Function
-    vocab=sorted(set(text))
-    vocab_to_int = {word: ii for ii, word in enumerate(vocab, 1)}
+    vocab=set(text)
+    vocab_to_int = {word: ii for ii, word in enumerate(vocab)}
     int_to_vocab={vocab_to_int[key]:key for key in vocab_to_int}
     
     return vocab_to_int, int_to_vocab
@@ -235,16 +235,23 @@ def get_init_cell(batch_size, rnn_size):
     :return: Tuple (cell, initialize state)
     """
     # TODO: Implement Function
-    lstm = tf.contrib.rnn.BasicLSTMCell(rnn_size)
+#     lstm = tf.contrib.rnn.BasicLSTMCell(rnn_size)
     
-    drop = tf.contrib.rnn.DropoutWrapper(lstm, output_keep_prob=0.5)
+#     drop = tf.contrib.rnn.DropoutWrapper(lstm, output_keep_prob=0.5)
     
-    # Stack up multiple LSTM layers, for deep learning
-    cell = tf.contrib.rnn.MultiRNNCell([drop] * 1)
+#     # Stack up multiple LSTM layers, for deep learning
+#     cell = tf.contrib.rnn.MultiRNNCell([drop] * 1)
     
-    # Getting an initial state of all zeros
-    initial_state = tf.identity(cell.zero_state(batch_size, tf.float32),name='initial_state')
+#     # Getting an initial state of all zeros
+#     initial_state = tf.identity(cell.zero_state(batch_size, tf.float32),name='initial_state')
     
+    def make_lstm(rnn_size):
+        return tf.contrib.rnn.BasicLSTMCell(rnn_size)
+    
+    n_layers=2
+    cell = tf.contrib.rnn.MultiRNNCell([ make_lstm(rnn_size) for _ in range(n_layers)])
+    initial_state = cell.zero_state(batch_size, tf.float32)
+    initial_state = tf.identity(initial_state, name='initial_state')
     return cell, initial_state
 
 
@@ -369,7 +376,7 @@ tests.test_build_nn(build_nn)
 # ]
 # ```
 
-# In[13]:
+# In[17]:
 
 def get_batches(int_text, batch_size, seq_length):
     """
@@ -384,20 +391,16 @@ def get_batches(int_text, batch_size, seq_length):
     n_batches=len(int_text)//words_per_batch
     
     data_batches=np.zeros((n_batches,2,batch_size,seq_length),dtype=np.array(int_text).dtype)
+    inputs = np.array(int_text[:n_batches * words_per_batch]).reshape((batch_size, -1))
+    if(n_batches * words_per_batch<len(int_text)):
+        targets = np.array(int_text[1:n_batches * words_per_batch + 1]).reshape((batch_size, -1))
+    else:
+        targets = np.array(int_text[1:n_batches * words_per_batch].append(0)).reshape((batch_size, -1))
     
     for n in range(n_batches):
-        id_start=n*words_per_batch
-        x_temp=np.array(int_text[id_start:id_start+words_per_batch])
-        x=x_temp.reshape((batch_size,-1))
-        
-        y_temp=np.zeros((words_per_batch),dtype=np.array(int_text).dtype)
-        y_temp[:-1]=x_temp[1:]
-        if(len(int_text)>id_start+words_per_batch):
-            y_temp[-1]=int_text[id_start+words_per_batch]
-        y=y_temp.reshape((batch_size,-1))
-        
-        data_batches[n,0,:,:]=x
-        data_batches[n,1,:,:]=y
+        id_start=n * seq_length
+        data_batches[n,0,:,:] = inputs[:, id_start:id_start + seq_length]
+        data_batches[n,1,:,:] = targets[:, id_start:id_start + seq_length]
         
     return data_batches
 
@@ -420,22 +423,22 @@ tests.test_get_batches(get_batches)
 # - Set `learning_rate` to the learning rate.
 # - Set `show_every_n_batches` to the number of batches the neural network should print progress.
 
-# In[14]:
+# In[21]:
 
 # Number of Epochs
-num_epochs = 20
+num_epochs = 200
 # Batch Size
-batch_size = 50
+batch_size = 64
 # RNN Size
-rnn_size = 128
+rnn_size = 512
 # Embedding Dimension Size
 embed_dim = 300
 # Sequence Length
-seq_length = 10
+seq_length = 12
 # Learning Rate
-learning_rate = 0.0005
+learning_rate = 0.001
 # Show stats for every n number of batches
-show_every_n_batches = 5
+show_every_n_batches = 50
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
@@ -446,7 +449,7 @@ save_dir = './save'
 # ### Build the Graph
 # Build the graph using the neural network you implemented.
 
-# In[15]:
+# In[19]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -482,7 +485,7 @@ with train_graph.as_default():
 # ## Train
 # Train the neural network on the preprocessed data.  If you have a hard time getting a good loss, check the [forms](https://discussions.udacity.com/) to see if anyone is having the same problem.
 
-# In[16]:
+# In[22]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -520,7 +523,7 @@ with tf.Session(graph=train_graph) as sess:
 # ## Save Parameters
 # Save `seq_length` and `save_dir` for generating a new TV script.
 
-# In[17]:
+# In[23]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -531,7 +534,7 @@ helper.save_params((seq_length, save_dir))
 
 # # Checkpoint
 
-# In[18]:
+# In[24]:
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL
@@ -555,7 +558,7 @@ seq_length, load_dir = helper.load_params()
 # 
 # Return the tensors in the following tuple `(InputTensor, InitialStateTensor, FinalStateTensor, ProbsTensor)` 
 
-# In[19]:
+# In[25]:
 
 def get_tensors(loaded_graph):
     """
@@ -580,7 +583,7 @@ tests.test_get_tensors(get_tensors)
 # ### Choose Word
 # Implement the `pick_word()` function to select the next word using `probabilities`.
 
-# In[20]:
+# In[26]:
 
 def pick_word(probabilities, int_to_vocab):
     """
@@ -610,7 +613,7 @@ tests.test_pick_word(pick_word)
 # ## Generate TV Script
 # This will generate the TV script for you.  Set `gen_length` to the length of TV script you want to generate.
 
-# In[21]:
+# In[27]:
 
 gen_length = 200
 # homer_simpson, moe_szyslak, or Barney_Gumble
